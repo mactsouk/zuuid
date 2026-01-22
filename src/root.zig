@@ -5,57 +5,46 @@ const std = @import("std");
 pub const Uuid = struct {
     bytes: [16]u8,
 
-    /// Generates a new Version 4 (Random) UUID.
-    /// Uses the system's cryptographically secure random number generator.
     pub fn v4() Uuid {
         var bytes: [16]u8 = undefined;
         std.crypto.random.bytes(&bytes);
 
-        // Set Version: 4 (0100)
+        // Version 4 (0100)
         bytes[6] = (bytes[6] & 0x0f) | 0x40;
-
-        // Set Variant: RFC 4122 (10xx)
+        // Variant 1 (10xx)
         bytes[8] = (bytes[8] & 0x3f) | 0x80;
 
         return Uuid{ .bytes = bytes };
     }
 
-    /// Implements custom formatting for the UUID struct.
-    /// This allows usage with std.debug.print and std.fmt.allocPrint.
-    ///
-    /// Supported format specifiers:
-    /// - {} or {x}: Standard lowercase hex (e.g., f47ac10b-...)
-    /// - {X}: Uppercase hex (e.g., F47AC10B-...)
-    pub fn format(
-        self: Uuid,
-        comptime fmt: []const u8,
-        options: std.fmt.FormatOptions,
-        writer: anytype,
-    ) !void {
-        _ = options;
+    // Fixed format function
+    pub fn format(self: Uuid, writer: anytype) !void {
+        var buf: [36]u8 = undefined;
         
-        // Determine case based on format string
-        const use_upper = if (fmt.len == 1 and fmt[0] == 'X') true else false;
+        const hex = "{x:0>2}";
+        const pattern = hex ++ hex ++ hex ++ hex ++ "-" ++
+                        hex ++ hex ++ "-" ++
+                        hex ++ hex ++ "-" ++
+                        hex ++ hex ++ "-" ++
+                        hex ++ hex ++ hex ++ hex ++ hex ++ hex;
 
-        // We use a compile-time string to construct the format pattern.
-        // This keeps the runtime logic efficient.
-        const hex_fmt = if (use_upper) "{X:0>2}" else "{x:0>2}";
-        const pattern = hex_fmt ++ hex_fmt ++ hex_fmt ++ hex_fmt ++ "-" ++
-                        hex_fmt ++ hex_fmt ++ "-" ++
-                        hex_fmt ++ hex_fmt ++ "-" ++
-                        hex_fmt ++ hex_fmt ++ "-" ++
-                        hex_fmt ++ hex_fmt ++ hex_fmt ++ hex_fmt ++ hex_fmt ++ hex_fmt;
-
-        try std.fmt.format(writer, pattern, .{
+        // THE FIX: We add 'catch unreachable'.
+        // We know [36]u8 is exactly enough for a UUID, so 'NoSpaceLeft' is impossible.
+        // This strips the incompatible error from the return type.
+        const slice = std.fmt.bufPrint(&buf, pattern, .{
             self.bytes[0],  self.bytes[1],  self.bytes[2],  self.bytes[3],
             self.bytes[4],  self.bytes[5],
             self.bytes[6],  self.bytes[7],
             self.bytes[8],  self.bytes[9],
             self.bytes[10], self.bytes[11],
             self.bytes[12], self.bytes[13], self.bytes[14], self.bytes[15],
-        });
+        }) catch unreachable;
+
+        // Now we only return write errors, which std.debug.print accepts.
+        _ = try writer.write(slice);
     }
 };
+
 
 test "basic v4 generation" {
     const uuid = Uuid.v4();
