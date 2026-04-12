@@ -3,9 +3,9 @@ const std = @import("std");
 pub const Uuid = struct {
     bytes: [16]u8,
 
-    pub fn v4() Uuid {
+    pub fn v4(io: std.Io) Uuid {
         var bytes: [16]u8 = undefined;
-        std.crypto.random.bytes(&bytes);
+        io.random(&bytes);
         bytes[6] = (bytes[6] & 0x0f) | 0x40;
         bytes[8] = (bytes[8] & 0x3f) | 0x80;
         return Uuid{ .bytes = bytes };
@@ -50,12 +50,12 @@ pub const Uuid = struct {
             uuid.bytes[12], uuid.bytes[13], uuid.bytes[14], uuid.bytes[15],
         }) catch unreachable; // Safe because buf is exactly 36 bytes
 
-        _ = try writer.write(slice);
+        try writer.writeAll(slice);
     }
 };
 
 test "basic v4 generation" {
-    const uuid = Uuid.v4();
+    const uuid = Uuid.v4(std.testing.io);
     // Verify version nibble (high nibble of byte 6 should be 4)
     try std.testing.expectEqual(@as(u8, 4), uuid.bytes[6] >> 4);
     // Verify variant nibble (high nibble of byte 8 should be 8, 9, A, or B)
