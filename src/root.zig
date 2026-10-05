@@ -55,7 +55,9 @@ pub const Uuid = struct {
 };
 
 test "basic v4 generation" {
-    const uuid = Uuid.v4(std.testing.io);
+    var t: std.Io.Threaded = .init_single_threaded;
+    const io = t.io();
+    const uuid = Uuid.v4(io);
     // Verify version nibble (high nibble of byte 6 should be 4)
     try std.testing.expectEqual(@as(u8, 4), uuid.bytes[6] >> 4);
     // Verify variant nibble (high nibble of byte 8 should be 8, 9, A, or B)

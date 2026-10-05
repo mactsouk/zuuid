@@ -23,10 +23,10 @@ pub fn main(init: std.process.Init) !void {
     while (i < count) : (i += 1) {
         const id = zuuid.Uuid.v4(init.io);
         const s = if (use_uppercase)
-            std.fmt.bufPrint(&buf, "{f}\n", .{id.fmtUpper()}) catch unreachable
+            std.fmt.bufPrint(&buf, "{f}\n", .{id.fmtUpper()}) catch
+                unreachable
         else
             std.fmt.bufPrint(&buf, "{f}\n", .{id}) catch unreachable;
         try std.Io.File.stdout().writeStreamingAll(init.io, s);
     }
 }
-
